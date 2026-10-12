@@ -800,7 +800,7 @@
 "whole milk": "volle melk",
 "oat milk": "haver drink",
 "soy milk": "soja drink",
-"butter": "boter",
+"butter": "roomboter",
 "eggs": "eieren",
 "egg": "eieren",
 "cheese": "kaas",
@@ -997,6 +997,7 @@
 "lentil": "linzen",
 "basmati": "basmati",
 "oat drink": "haver drink",
-"almond milk": "amandel drink"
+"almond milk": "amandel drink",
+"ground coffee": "filterkoffie"
 }
 }

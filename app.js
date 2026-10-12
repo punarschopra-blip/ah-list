@@ -31,7 +31,7 @@ async function sync(){if(busy)return;busy=true;try{
  const need=dirty||Object.values(S.items).some(i=>!remote[i.id]||remote[i.id].t<i.t);
  if(need){const now=Date.now();const out={};for(const[k,v]of Object.entries(S.items))if(!(v.del&&now-v.t>14*864e5))out[k]=v;
   const w=await fetch(W,{method:'POST',body:new URLSearchParams({key:KEY,value:JSON.stringify({v:1,items:out})})});if(!(await w.json()).status)throw 0;dirty=false}
- $('#dot').classList.add('on')}catch(e){$('#dot').classList.remove('on')}busy=false;if(dirty)setTimeout(sync,1500)}
+ setOn(1)}catch(e){setOn(0)}busy=false;if(dirty)setTimeout(sync,1500)}
 function connect(){sync();setInterval(()=>{if(!document.hidden)sync()},4000)}
 // ---------- model ----------
 function learn(it){if(it.del)return;const n=norm(it.name);const h=S.hist[n]||{n:0};S.hist[n]={name:it.name,c:it.cat,p:it.p||0,s:it.s||'',l:it.l||'',n:h.n+(h.last===it.id?0:1),last:it.id}}
@@ -39,54 +39,102 @@ function put(it){it.t=Date.now();S.items[it.id]=it;learn(it);save();pub();render
 function parse(txt){let m=txt.trim().match(/^(\d+[.,]?\d*\s?(x|kg|g|l|ml|st|pak|zak)?)\s+(.+)$/i)||txt.trim().match(/^(.+?)\s+(\d+[.,]?\d*\s?(x|kg|g|l|ml|st)?)$/i);
 if(!m)return{name:txt.trim(),qty:''};return /^\d/.test(m[1])?{name:m[3],qty:m[1]}:{name:m[1],qty:m[2]}}
 function add(txt,x){if(!txt.trim())return;const p=parse(txt);x=x||S.hist[norm(p.name)]||{};const name=x.name||p.name.charAt(0).toUpperCase()+p.name.slice(1);
-const ex=Object.values(S.items).find(i=>!i.del&&!i.done&&norm(i.name)===norm(name));if(ex){toast(name+' is already on the list');return}
-put({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,qty:p.qty,note:'',nl:x.l?'':nlOf(name),p:x.p||0,s:x.s||'',l:x.l||'',cat:x.c||catOf(name),by:(S.me||"P")[0],done:false,del:false})}
-// ---------- UI ----------
-let last=null;function toast(msg,undo){$('#tm').textContent=msg;$('#undo').style.display=undo?'':'none';last=undo;const t=$('#toast');t.classList.add('s');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('s'),3500)}
-$('#undo').onclick=()=>{if(last){last.forEach(o=>put(o));last=null}$('#toast').classList.remove('s')};
-const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+const ex=Object.values(S.items).find(i=>!i.del&&!i.done&&norm(i.name)===norm(name));if(ex){toast(name+' is already on the list');return false}
+put({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,qty:p.qty,note:'',nl:x.l?'':nlOf(name),p:x.p||0,s:x.s||'',l:x.l||'',cat:x.c||catOf(name),by:(S.me||"P")[0],done:false,del:false});return true}
+// ================= UI =================
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+const PEOPLE={P:{n:'Punardeep',c:'#0A84FF'},A:{n:'Aastha',c:'#FF5E9A'}};
+const eur=v=>'€'+v.toFixed(2).replace('.',',');
+S.col=S.col||{};S.shop=!!S.shop;
+function setOn(v){$('#sync').classList.toggle('on',!!v)}
+// haptics: Android vibrate; iOS 18+ switch-toggle trick
+const hl=$('#hapt');function tap(){try{navigator.vibrate&&navigator.vibrate(8);hl.click()}catch(_){}}
+// toast
+let undoBuf=null;function toast(msg,undo){$('#tm').textContent=msg;$('#undo').hidden=!undo;undoBuf=undo||null;const t=$('#toast');t.classList.add('s');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('s'),3800)}
+$('#undo').onclick=()=>{if(undoBuf){undoBuf.forEach(o=>put(o));undoBuf=null;tap()}$('#toast').classList.remove('s')};
+const avatar=b=>`<span class="av" style="background:${PEOPLE[b]?.c||'#888'}">${(PEOPLE[b]?.n||'?')[0]}</span>`;
+function row(i){const sub=[i.nl&&!i.l?'AH: '+esc(i.nl):'',esc(i.s),esc(i.note)].filter(Boolean).join(' · ');
+return`<div class="row${i.done?' done':''}" data-id="${i.id}"><div class="sw l">✓</div><div class="sw r">Delete</div><div class="rc">
+<button class="ck" aria-label="tick"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></button>
+<div class="em">${emo(i)}</div><div class="bd"><div class="nm">${i.qty?`<b class="qt">${esc(i.qty)}</b>`:''}${esc(i.name)}</div>${sub?`<div class="sb">${sub}</div>`:''}</div>
+<div class="rt"><span class="pr">${i.p?'':'~'}${eur(price(i))}</span>${avatar(i.by)}</div></div></div>`}
 function render(){const now=Date.now();for(const[k,v]of Object.entries(S.items))if(v.del&&now-v.t>3*864e5)delete S.items[k];
-const live=Object.values(S.items).filter(i=>!i.del);const L=$('#list');
-if(!live.length){L.innerHTML='<div class="empty"><b>🛒</b>List is empty.<br>Type above what you need.</div>'}else{
-let h='';for(const[c,lab]of CATS){const g=live.filter(i=>i.cat===c&&!i.done).sort((a,b)=>a.name.localeCompare(b.name));if(!g.length)continue;h+=`<h2>${lab} <span style="float:right">aisle ~${CATS.findIndex(x=>x[0]===c)+1}</span></h2><div class="grp">${g.map(row).join('')}</div>`}
-const d=live.filter(i=>i.done).sort((a,b)=>b.t-a.t);if(d.length)h+=`<h2>✓ In the basket (${d.length})</h2><div class="grp">${d.map(row).join('')}</div>`;L.innerHTML=h}
-const open=live.filter(i=>!i.done);$('#tot').innerHTML=open.length?`Est. <b>€${open.reduce((a,i)=>a+price(i),0).toFixed(2)}</b> · ${open.length} items · ${esc(S.store||STORES[0])}`:esc(S.store||STORES[0]);
-$('#clr').style.display=live.some(i=>i.done)?'':'none';
-const onList=new Set(live.filter(i=>!i.done).map(i=>norm(i.name)));
-const fav=Object.values(S.hist).filter(h=>!onList.has(norm(h.name))).sort((a,b)=>b.n-a.n).slice(0,12);
-$('#chips').innerHTML=fav.map(f=>`<button class="chip" data-n="${esc(f.name)}">+ ${esc(f.name)}</button>`).join('')}
-function row(i){return`<div class="item ${i.done?'done':''}" data-id="${i.id}"><div class="ck">${i.done?'✓':''}</div><div class="pic">${emo(i)}</div><div class="bd"><div class="nm">${i.qty?`<span class="q">${esc(i.qty)}</span>`:''}${esc(i.name)}</div><div class="meta">${i.nl?'<i>AH: '+esc(i.nl)+'</i> · ':''}${i.note?esc(i.note)+' · ':''}${i.s?esc(i.s)+' · ':''}${i.p?'':'~'}€${price(i).toFixed(2)} · <a href="${i.l?'https://www.ah.nl/producten/product/'+i.l:'https://www.ah.nl/zoeken?query='+encodeURIComponent(i.nl||i.name)}" target="_blank" onclick="event.stopPropagation()">ah.nl</a></div></div><span class="who ${i.by}">${i.by==='P'?'Punardeep':'Aastha'}</span></div>`}
-$('#list').addEventListener('click',e=>{const r=e.target.closest('.item');if(!r)return;const it=S.items[r.dataset.id];
-if(e.target.closest('.ck')||e.target.closest('.nm')&&false){}
-if(e.target.closest('.bd')&&!e.target.closest('.ck')&&!press){return openEd(it)}
-const old={...it};put({...it,done:!it.done});if(navigator.vibrate)navigator.vibrate(10);toast(it.done?'':`${it.name} ticked off`,[old])});
-let press=false;
-$('#chips').onclick=e=>{const b=e.target.closest('.chip');if(b)add(b.dataset.n)};
-$('#clr').onclick=()=>{const d=Object.values(S.items).filter(i=>i.done&&!i.del);const old=d.map(i=>({...i}));d.forEach(i=>put({...i,del:true}));toast(d.length+' items cleared',old)};
-// autocomplete
-const q=$('#q'),sug=$('#sug');
-let SR=[];
-function suggest(){const raw=parse(q.value).name,v=norm(raw);if(!v){sug.style.display='none';return}const out=[],seen=new Set();
-for(const h of Object.values(S.hist).sort((a,b)=>b.n-a.n))if(norm(h.name).includes(v)&&out.length<3){seen.add(norm(h.name));out.push(h)}
-if(CAT&&v.length>1){const sy=CAT.syn;const terms=(sy[v]||v.split(' ').map(w=>sy[w]||w).join(' ')).split(' ').filter(Boolean);const hits=[];
- for(let i=0;i<IDX.length;i++){const t=IDX[i];let sc=0,ok=true;for(const w of terms){const k=t.indexOf(w);if(k<0){ok=false;break}sc+=t[k-1]===' '?10:3;if(t.endsWith(' '+w))sc+=8;else if(t.includes(' '+w+' '))sc+=3}
-  if(ok){if(t.startsWith(' ah '))sc+=6;sc-=t.length/12;hits.push([sc,i])}}
- if(!hits.length&&terms.join(' ')!==v){q.dataset.f=1}hits.sort((a,b)=>b[0]-a[0]);for(const[,i]of hits.slice(0,8)){const p=CAT.p[i];if(seen.has(norm(p[0])))continue;out.push({name:p[0],p:p[1],s:p[2],l:p[3],c:CAT.order[p[4]]})}}
-SR=out.slice(0,7);sug.innerHTML=SR.map((h,k)=>`<div data-k="${k}"><span>${h.l&&!h.n?'':'★ '}${esc(h.name)}${h.s?` <small>· ${esc(h.s)}</small>`:''}</span><small>${h.p?'€'+(+h.p).toFixed(2)+' ':''}${(CATN[h.c]||'').split(' ')[0]}</small></div>`).join('');sug.style.display=SR.length?'block':'none'}
-q.oninput=suggest;sug.addEventListener('mousedown',e=>e.preventDefault());
-sug.onclick=e=>{const d=e.target.closest('[data-k]');if(!d)return;const h=SR[+d.dataset.k];const p=parse(q.value);add((p.qty?p.qty+' ':'')+h.name,h);q.value='';sug.style.display='none';q.focus()};
-$('#f').onsubmit=e=>{e.preventDefault();add(q.value);q.value='';sug.style.display='none'};q.onblur=()=>setTimeout(()=>sug.style.display='none',100);
-// editor
-let cur;$('#ec').innerHTML=CATS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
-function openEd(it){cur=it;$('#en').value=it.name;$('#eq').value=it.qty||'';$('#eo').value=it.note||'';$('#ec').value=it.cat;$('#ed').classList.add('s')}
-$('#ed').onclick=e=>{if(e.target.id==='ed')$('#ed').classList.remove('s')};
-$('#esave').onclick=()=>{const n=$('#en').value.trim()||cur.name;const c=$('#ec').value;put({...cur,name:n,nl:n===cur.name?cur.nl:nlOf(n),...(n===cur.name?{}:{p:0,l:'',s:''}),qty:$('#eq').value.trim(),note:$('#eo').value.trim(),cat:c});S.hist[norm(n)]&&(S.hist[norm(n)].c=c,save());$('#ed').classList.remove('s')};
-$('#edel').onclick=()=>{const old={...cur};put({...cur,del:true});$('#ed').classList.remove('s');toast(cur.name+' removed',[old])};
-// who
-function setMe(w){S.me=w;save();$('#me').textContent=w;$('#who').classList.remove('s')}
-document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>setMe(b.dataset.w));$('#me').onclick=()=>$('#who').classList.add('s');
-if(S.me)$('#me').textContent=S.me;else $('#who').classList.add('s');
-$('#store').innerHTML=STORES.map(x=>`<option>${x}</option>`).join('');$('#store').value=S.store||STORES[0];$('#store').onchange=e=>{S.store=e.target.value;save();render()};
-{const u=new URLSearchParams(location.search);if(u.get('me'))setMe(u.get('me'));if(u.get('add'))setTimeout(()=>add(u.get('add')),50)}
-render();if(!location.search.includes("nosync"))connect();document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+const live=Object.values(S.items).filter(i=>!i.del),open=live.filter(i=>!i.done),done=live.filter(i=>i.done);
+document.body.classList.toggle('shop',S.shop);
+const L=$('#list');let h='';
+if(!live.length)h=`<div class="empty"><div class="ill">🧺</div><h3>Your list is empty</h3><p>Tap <b>Add item</b> below — search 15,000 AH products in English or Dutch.</p></div>`;
+else if(!open.length)h=`<div class="empty sm"><div class="ill">🎉</div><h3>All done!</h3><p>Everything's in the basket.</p></div>`;
+CATS.forEach(([c,lab],ix)=>{const g=open.filter(i=>i.cat===c).sort((a,b)=>a.name.localeCompare(b.name));if(!g.length)return;const col=S.col[c];
+ const[e,...n]=lab.split(' ');h+=`<section class="sec${col?' col':''}"><header data-c="${c}"><span class="se">${e}</span><span class="sn">${n.join(' ')}</span><span class="cnt">${g.length}</span><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></header><div class="grp">${g.map(row).join('')}</div></section>`});
+if(done.length){const col=S.col._done;h+=`<section class="sec basket${col?' col':''}"><header data-c="_done"><span class="se">🧺</span><span class="sn">In the basket</span><span class="cnt">${done.length}</span><button class="clr" id="clr">Clear</button><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></header><div class="grp">${done.sort((a,b)=>b.t-a.t).map(row).join('')}</div></section>`}
+L.innerHTML=h;
+// progress + totals
+const tot=live.length,dn=done.length,frac=tot?dn/tot:0;$('#ring').style.strokeDashoffset=(1-frac)*113.1;
+$('#prog').textContent=tot?`${dn} of ${tot} in basket`:'Nothing on the list yet';
+$('#ptxt').textContent=tot?Math.round(frac*100)+'%':'';
+const rest=open.reduce((a,i)=>a+price(i),0),all=live.reduce((a,i)=>a+price(i),0);
+$('#total').textContent=eur(all);$('#tsub').textContent=open.length?`${eur(rest)} still to get`+(live.some(i=>!i.p)?' · ~ estimated':''):tot?'All in the basket':'';
+$('#store').textContent=S.store||STORES[0];$('#shopb').classList.toggle('on',S.shop);}
+// --- list interactions: tap, swipe, collapse ---
+const LST=$('#list');
+LST.addEventListener('click',e=>{if(e.target.id==='clr'){e.stopPropagation();const d=Object.values(S.items).filter(i=>i.done&&!i.del),old=d.map(i=>({...i}));d.forEach(i=>{i.del=true;i.t=Date.now()});save();pub();render();tap();toast(`Cleared ${d.length} item${d.length>1?'s':''}`,old);return}
+ const hd=e.target.closest('header[data-c]');if(hd){const c=hd.dataset.c;S.col[c]=!S.col[c];save();hd.parentNode.classList.toggle('col');return}
+ const r=e.target.closest('.row');if(!r||r._sw)return;const it=S.items[r.dataset.id];if(e.target.closest('.ck'))return toggle(r,it);openEd(it)});
+function toggle(r,it){tap();const old={...it};r.classList.add(it.done?'unpop':'pop');if(!it.done)r.classList.add('done');
+ setTimeout(()=>{r.classList.add('out');setTimeout(()=>{put({...it,done:!it.done});if(!it.done)toast(`${it.name} in the basket`,[old])},220)},380)}
+let sx=0,sy=0,cur=null,dx=0,lock=0;
+LST.addEventListener('touchstart',e=>{const r=e.target.closest('.row');if(!r)return;cur=r;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;lock=0;r._sw=false},{passive:true});
+LST.addEventListener('touchmove',e=>{if(!cur)return;const x=e.touches[0].clientX-sx,y=e.touches[0].clientY-sy;if(!lock)lock=Math.abs(x)>8?1:Math.abs(y)>8?2:0;if(lock!==1)return;
+ e.preventDefault();dx=x;cur._sw=true;const c=cur.querySelector('.rc');c.style.transition='none';c.style.transform=`translateX(${x}px)`;cur.classList.toggle('arm',Math.abs(x)>90);cur.dataset.dir=x>0?'l':'r'},{passive:false});
+LST.addEventListener('touchend',()=>{if(!cur)return;const r=cur,c=r.querySelector('.rc'),it=S.items[r.dataset.id];cur=null;c.style.transition='';
+ if(Math.abs(dx)>90){if(dx>0){c.style.transform='';toggle(r,it)}else{tap();c.style.transform='translateX(-110%)';const old={...it};setTimeout(()=>{put({...it,del:true});toast(it.name+' deleted',[old])},200)}}else c.style.transform='';
+ r.classList.remove('arm');setTimeout(()=>r._sw=false,50)});
+// --- add sheet ---
+const sheet=$('#add'),q=$('#q'),sug=$('#sug');let SR=[];
+function openAdd(v){sheet.classList.add('s');document.body.classList.add('lock');q.value=v||'';suggest();setTimeout(()=>q.focus(),60)}
+function closeAdd(){sheet.classList.remove('s');document.body.classList.remove('lock');q.blur()}
+$('#addb').onclick=()=>openAdd();$('#done').onclick=closeAdd;sheet.onclick=e=>{if(e.target===sheet)closeAdd()};
+const STAPLE=/ (halfvolle|volle|magere|houdbare|scharrel|vrije uitloop|volkoren|bruin|tarwe|mineraalwater|ongezouten|gezouten|langgraan|toiletpapier|keukenpapier)\b/;
+const JUNK=/(croissant|spread|speculoos|ragout|bapao|miso|kruidnoot|kruidnoten|muffin|koffieroom|koffiewafel|mousse|blokken|broodje|ijsje|appelflap|stroopwafel|bladerdeeg|doekjes)|\b(chocoladepasta|digestive|hagelslag|rotsjes|pindarotsjes|biscuit|vlokken|flikken|repen|pasta|reep|maaltijd|stamppot|worst|mousse|zakjes|toiletblok|chocolade|choco|creme|crème|vochtig|bonbon|drop|koek|snoep|smaak|ijs|chips|toetje|pudding|dessert|mix|saus|poeder|wafel|reiniger|doekjes|spray|shake)\b/;
+function search(v){const sy=CAT.syn;const terms=(sy[v]||v.split(' ').map(w=>sy[w]||w).join(' ')).split(' ').filter(Boolean),hits=[];
+ const want=ruleCat(terms.join(' ')),wi=want?CAT.order.indexOf(want):-1;
+ for(let i=0;i<IDX.length;i++){const t=IDX[i];let sc=0,ok=true;
+  for(const w of terms){const k=t.indexOf(w);if(k<0){ok=false;break}const st=t[k-1]===' ',en=k+w.length===t.length||t[k+w.length]===' ';sc+=st&&en?14:st?5:1;if(t.endsWith(' '+w))sc+=8;if((t+' ').startsWith(' ah '+w+' ')||(t+' ').startsWith(' ah biologisch '+w+' '))sc+=9}
+  if(!ok)continue;const p=CAT.p[i],wc=t.trim().split(' ').length;if(t.startsWith(' ah '))sc+=6;sc-=wc*1.8;if(wi>=0&&p[4]===wi)sc+=7;if(STAPLE.test(t))sc+=4;
+  if(JUNK.test(t)&&!terms.some(w=>JUNK.test(' '+w+' ')))sc-=16;hits.push([sc,i])}
+ return hits.sort((a,b)=>b[0]-a[0]).slice(0,12).map(([,i])=>{const p=CAT.p[i];return{name:p[0],p:p[1],s:p[2],l:p[3],c:CAT.order[p[4]]}})}
+function sitem(h,k){const it={...h,cat:h.c};const on=Object.values(S.items).some(i=>!i.del&&!i.done&&norm(i.name)===norm(h.name));
+ return`<button class="si${on?' on':''}" data-k="${k}"><span class="em">${emo(it)}</span><span class="bd"><span class="nm">${esc(h.name)}</span><span class="sb">${[h.s,(CATN[h.c]||'').replace(/^\S+ /,'')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="pr">${h.p?eur(+h.p):''}</span><span class="plus">${on?'✓':'+'}</span></button>`}
+function suggest(){const raw=parse(q.value).name,v=norm(raw);let out=[];
+ if(!v){const onl=new Set(Object.values(S.items).filter(i=>!i.del&&!i.done).map(i=>norm(i.name)));out=Object.values(S.hist).filter(h=>!onl.has(norm(h.name))).sort((a,b)=>b.n-a.n).slice(0,14);
+  SR=out;sug.innerHTML=out.length?`<div class="sh">Frequently bought</div>`+out.map(sitem).join(''):`<div class="hint"><div class="ill">🔎</div>Search in English or Dutch — “milk”, “kipfilet”, “toilet paper”.<br>Start with a number for quantity: “2 milk”.</div>`;return}
+ const seen=new Set();for(const h of Object.values(S.hist).sort((a,b)=>b.n-a.n))if(norm(h.name).includes(v)&&out.length<3){seen.add(norm(h.name));out.push(h)}
+ if(CAT&&v.length>1)for(const h of search(v))if(!seen.has(norm(h.name)))out.push(h);
+ SR=out.slice(0,12);const free=`<button class="si free" data-k="-1"><span class="em">✏️</span><span class="bd"><span class="nm">Add “${esc(q.value.trim())}”</span><span class="sb">As typed${nlOf(raw)?' · AH: '+esc(nlOf(raw)):''}</span></span><span class="plus">+</span></button>`;
+ sug.innerHTML=free+(SR.length?`<div class="sh">AH products</div>`+SR.map(sitem).join(''):'')}
+let st;q.oninput=()=>{clearTimeout(st);st=setTimeout(suggest,60)};
+sug.onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;const k=+b.dataset.k,p=parse(q.value);
+ const ok=k<0?add(q.value):add((p.qty?p.qty+' ':'')+SR[k].name,SR[k]);if(ok===false)return;tap();b.classList.add('on','flash');b.querySelector('.plus').textContent='✓';
+ if(q.value){setTimeout(()=>{q.value='';suggest();q.focus()},350)}};
+$('#f').onsubmit=e=>{e.preventDefault();if(!q.value.trim())return;const b=sug.querySelector('.si:not(.free)');add(q.value);tap();q.value='';suggest()};
+// --- edit sheet ---
+let ed;$('#ec').innerHTML=CATS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
+function openEd(it){ed=it;$('#en').value=it.name;$('#eq').value=it.qty||'';$('#eo').value=it.note||'';$('#ec').value=it.cat;
+ $('#elink').href=it.l?'https://www.ah.nl/producten/product/'+it.l:'https://www.ah.nl/zoeken?query='+encodeURIComponent(it.nl||it.name);
+ $('#einfo').textContent=[it.s,it.p?eur(+it.p)+' each':'price estimated','added by '+(PEOPLE[it.by]?.n||'?')].filter(Boolean).join(' · ');$('#ed').classList.add('s')}
+const closeEd=()=>$('#ed').classList.remove('s');$('#ed').onclick=e=>{if(e.target.id==='ed')closeEd()};$('#ecancel').onclick=closeEd;
+$('#esave').onclick=()=>{const n=$('#en').value.trim()||ed.name,c=$('#ec').value;put({...ed,name:n,nl:n===ed.name?ed.nl:nlOf(n),...(n===ed.name?{}:{p:0,l:'',s:''}),qty:$('#eq').value.trim(),note:$('#eo').value.trim(),cat:c});if(S.hist[norm(n)]){S.hist[norm(n)].c=c;save()}closeEd()};
+$('#edel').onclick=()=>{const old={...ed};put({...ed,del:true});closeEd();toast(ed.name+' deleted',[old])};
+// --- who / store / shop mode ---
+function setMe(w){S.me=w;save();$('#me').innerHTML=avatar(w[0]);$('#who').classList.remove('s')}
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{tap();setMe(b.dataset.w)});$('#me').onclick=()=>$('#who').classList.add('s');
+$('#storeb').onclick=()=>{const i=(STORES.indexOf(S.store||STORES[0])+1)%STORES.length;S.store=STORES[i];save();render()};
+$('#shopb').onclick=()=>{S.shop=!S.shop;save();tap();render();toast(S.shop?'Shopping mode on — big rows, ticked items hidden':'Shopping mode off')};
+if(S.me)$('#me').innerHTML=avatar(S.me[0]);else $('#who').classList.add('s');
+// --- test hooks (?me=, ?add=, ?demo, ?sheet=, ?theme=) ---
+{const u=new URLSearchParams(location.search);if(u.get('theme'))document.documentElement.dataset.theme=u.get('theme');if(u.get('me'))setMe(u.get('me'));
+ if(u.has('demo')&&!Object.keys(S.items).length){const D=[['2','AH Halfvolle melk',.99,'1,5 l','zuivel','P'],['','AH Bananen tros',1.35,'per tros','agf','A'],['','AH Scharrel kipfilet',3.59,'300 g','vlees','P'],['','AH Koriander',1.19,'15 g','agf','A'],['','AH Volkoren brood',2.19,'800 g','brood','P'],['6','AH Vrije uitloop eieren L',2.59,'6 stuks','zuivel','A'],['','AH Toiletpapier 3-laags',5.49,'12 rollen','huishoud','P'],['','AH Basmati rijst',2.49,'1 kg','pasta','A'],['','AH Griekse yoghurt',1.89,'1 kg','zuivel','P']];
+  D[5][0]='';D.forEach(([qt,n,p,s,c,b],k)=>S.items['d'+k]={id:'d'+k,name:n,qty:qt,note:k==2?'Free range if possible':'',nl:'',p,s,l:'',cat:c,by:b,done:k==1||k==4,del:false,t:Date.now()-k*1000});save()}
+ if(u.get('add'))setTimeout(()=>add(u.get('add')),50);if(u.has('sheet'))setTimeout(()=>{openAdd(u.get('sheet'))},u.get('sheet')?700:50)}
+render();if(!location.search.includes('nosync'))connect();document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
