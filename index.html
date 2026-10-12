@@ -74,10 +74,10 @@ main{padding:4px 16px}
 #einfo{color:var(--mu);font-size:13px;margin:-4px 4px 12px}#elink{color:var(--ah);font-size:14px;font-weight:600;text-decoration:none;display:inline-block;margin:0 4px 14px}
 .whos{display:flex;gap:12px;margin:8px 0 6px}.whos button{flex:1;background:var(--card);border-radius:20px;padding:22px 10px;display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:600;box-shadow:var(--sh)}.whos .av{width:60px;height:60px;font-size:26px}
 .foot{color:var(--mu);font-size:12px;text-align:center;padding:26px 30px 0;line-height:1.45}
-.bar #f{display:flex;align-items:center;gap:10px}.sf{flex:1;display:flex;align-items:center;gap:8px;height:44px;border-radius:12px;background:rgba(118,118,128,.14);padding:0 10px;transition:background .2s}
+.bar #f{display:flex;align-items:center;gap:10px}.sf{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:44px;border-radius:12px;background:rgba(118,118,128,.14);padding:0 10px;transition:background .2s}
 .sf svg{width:18px;height:18px;stroke:var(--mu);fill:none;stroke-width:2.2;flex:none}#q{flex:1;min-width:0;font-size:17px;border:0;background:none;color:var(--tx);outline:none;height:100%;-webkit-appearance:none;-webkit-user-select:text;user-select:text}
 #q::-webkit-search-cancel-button{display:none}#qx{width:20px;height:20px;border-radius:50%;background:var(--mu);color:var(--card);font-size:11px;font-weight:700;display:none;flex:none}.searching #qx{display:grid;place-items:center}
-#cancel{color:var(--ah);font-size:17px;max-width:0;overflow:hidden;opacity:0;transition:max-width .3s,opacity .2s;white-space:nowrap}.searching #cancel{max-width:80px;opacity:1}
+#cancel{flex:none;color:var(--ah);font-size:17px;display:none;white-space:nowrap;animation:drop .25s}.searching #cancel{display:block}
 #res{position:fixed;left:0;right:0;top:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:9;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 8px) 16px 16px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .22s,transform .3s cubic-bezier(.2,.9,.3,1)}
 .searching #res{opacity:1;transform:none;pointer-events:auto}.searching{overflow:hidden}
 .gp{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}.gp .si{border-radius:0!important}
