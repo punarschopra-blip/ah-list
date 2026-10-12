@@ -1,9 +1,9 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8">
+<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Boodschappen">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="AH List">
 <meta name="theme-color" content="#00A0E2"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
-<title>Boodschappen</title>
+<title>AH List</title>
 <style>
 :root{--ah:#00A0E2;--ahd:#0079B8;--bg:#f2f5f8;--card:#fff;--tx:#14202b;--mu:#6b7a88;--ln:#e3e9ef;--ok:#2bb673}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1419;--card:#18222b;--tx:#eef3f7;--mu:#8fa0ae;--ln:#24313c;--ahd:#5cc6f2}}
@@ -39,12 +39,12 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);
 .pan h3{margin:0 0 14px}.pan input,.pan select{width:100%;font-size:17px;padding:13px;border-radius:12px;border:1px solid var(--ln);background:var(--bg);color:var(--tx);margin-bottom:10px}
 .row{display:flex;gap:8px}.big{font-size:22px;padding:22px}
 .pic{font-size:28px;width:34px;text-align:center;flex:none}.meta a{color:var(--ahd)}.tot{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:6px;font-size:15px}.foot{display:block;color:var(--mu);font-size:13px;margin:8px 6px}.foot select{font-size:15px;margin-left:6px;background:var(--card);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:6px}</style></head><body>
-<header><div class="top"><h1>Boodschappen</h1><span class="dot" id="dot"></span><button class="pill" id="me"></button></div>
-<form id="f" autocomplete="off"><input id="q" placeholder="Wat moet er mee? (bv. 2 melk)" enterkeyhint="done"><button id="add">+</button><div id="sug"></div></form></header>
+<header><div class="top"><h1>Groceries</h1><span class="dot" id="dot"></span><button class="pill" id="me"></button></div>
+<form id="f" autocomplete="off"><input id="q" placeholder="What do we need? (e.g. 2 milk)" enterkeyhint="done"><button id="add">+</button><div id="sug"></div></form></header>
 <main><div id="tot" class="tot"></div><div class="chips" id="chips"></div><div id="list"></div>
-<div class="bar"><button class="btn" id="clr">Wis afgevinkt</button></div><label class="foot">Winkel <select id="store"></select></label><p class="foot">Prijzen en looproute zijn schattingen (typische AH-indeling), geen live AH-data. Tik "ah.nl" voor de echte prijs &amp; foto.</p></main>
-<div id="toast"><span id="tm"></span><button id="undo">Ongedaan</button></div>
-<div class="sheet" id="who"><div class="pan"><h3>Wie ben jij?</h3><div class="row"><button class="btn p big" data-w="Punardeep">Punardeep</button><button class="btn p big" style="background:#e0569b" data-w="Aastha">Aastha</button></div></div></div>
-<div class="sheet" id="ed"><div class="pan"><h3>Bewerk</h3><input id="en" placeholder="Naam"><div class="row"><input id="eq" placeholder="Aantal" style="flex:1"><select id="ec" style="flex:2"></select></div><input id="eo" placeholder="Notitie (merk, bio, …)">
-<div class="row"><button class="btn" id="edel" style="color:#e5484d">Verwijder</button><button class="btn p" id="esave">Opslaan</button></div></div></div>
+<div class="bar"><button class="btn" id="clr">Clear ticked</button></div><label class="foot">Store <select id="store"></select></label><p class="foot">Prices and aisle order are estimates (typical AH layout), not live AH data. Tap "ah.nl" for the real price &amp; photo. Dutch names (AH: …) help you find items in store.</p></main>
+<div id="toast"><span id="tm"></span><button id="undo">Undo</button></div>
+<div class="sheet" id="who"><div class="pan"><h3>Who are you?</h3><div class="row"><button class="btn p big" data-w="Punardeep">Punardeep</button><button class="btn p big" style="background:#e0569b" data-w="Aastha">Aastha</button></div></div></div>
+<div class="sheet" id="ed"><div class="pan"><h3>Edit</h3><input id="en" placeholder="Name"><div class="row"><input id="eq" placeholder="Qty" style="flex:1"><select id="ec" style="flex:2"></select></div><input id="eo" placeholder="Note (brand, organic, …)">
+<div class="row"><button class="btn" id="edel" style="color:#e5484d">Delete</button><button class="btn p" id="esave">Save</button></div></div></div>
 <script src="config.js"></script><script src="app.js"></script></body></html>
