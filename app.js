@@ -40,10 +40,10 @@ function parse(txt){let m=txt.trim().match(/^(\d+[.,]?\d*\s?(x|kg|g|l|ml|st|pak|
 if(!m)return{name:txt.trim(),qty:''};return /^\d/.test(m[1])?{name:m[3],qty:m[1]}:{name:m[1],qty:m[2]}}
 function add(txt,x){if(!txt.trim())return;const p=parse(txt);x=x||S.hist[norm(p.name)]||{};const name=x.name||p.name.charAt(0).toUpperCase()+p.name.slice(1);
 const ex=Object.values(S.items).find(i=>!i.del&&!i.done&&norm(i.name)===norm(name));if(ex){toast(name+' is already on the list');return false}
-put({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,qty:p.qty,note:'',nl:x.l?'':nlOf(name),p:x.p||0,s:x.s||'',l:x.l||'',cat:x.c||catOf(name),by:(S.me||"P")[0],done:false,del:false});return true}
+put({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,qty:p.qty,note:'',nl:x.l?'':nlOf(name),p:x.p||0,s:x.s||'',l:x.l||'',cat:x.c||catOf(name),by:(S.me||"U")[0],done:false,del:false});return true}
 // ================= UI =================
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
-const PEOPLE={P:{n:'Punardeep',c:'#0A84FF'},A:{n:'Aastha',c:'#FF5E9A'}};
+const PEOPLE={P:{n:'Punardeep',c:'#0A84FF'},A:{n:'Aastha',c:'#FF5E9A'},U:{n:'Someone',c:'#8E8E93'}};
 const eur=v=>'€'+v.toFixed(2).replace('.',',');
 S.col=S.col||{};S.shop=!!S.shop;
 function setOn(v){$('#sync').classList.toggle('on',!!v)}
@@ -52,7 +52,7 @@ const hl=$('#hapt');function tap(){try{navigator.vibrate&&navigator.vibrate(8);h
 // toast
 let undoBuf=null;function toast(msg,undo){$('#tm').textContent=msg;$('#undo').hidden=!undo;undoBuf=undo||null;const t=$('#toast');t.classList.add('s');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('s'),3800)}
 $('#undo').onclick=()=>{if(undoBuf){undoBuf.forEach(o=>put(o));undoBuf=null;tap()}$('#toast').classList.remove('s')};
-const avatar=b=>`<span class="av" style="background:${PEOPLE[b]?.c||'#888'}">${(PEOPLE[b]?.n||'?')[0]}</span>`;
+const avatar=b=>`<span class="av" style="background:${PEOPLE[b]?.c||'#888'}">${b==='U'||!PEOPLE[b]?'?':PEOPLE[b].n[0]}</span>`;
 function row(i){const sub=[i.nl&&!i.l?'AH: '+esc(i.nl):'',esc(i.s),esc(i.note)].filter(Boolean).join(' · ');
 return`<div class="row${i.done?' done':''}" data-id="${i.id}"><div class="sw l">✓</div><div class="sw r">Delete</div><div class="rc">
 <button class="ck" aria-label="tick"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></button>
@@ -91,11 +91,18 @@ LST.addEventListener('touchend',()=>{if(!cur)return;const r=cur,c=r.querySelecto
  r.classList.remove('arm');setTimeout(()=>r._sw=false,50)});
 // --- add sheet ---
 const q=$('#q'),sug=$('#sug');let SR=[],STP=null;// STP={k:'r'|'l',key}
-const searching=v=>{document.body.classList.toggle('searching',v)};
+let lockY=0;const searching=v=>{const B=document.body;if(v===B.classList.contains('searching'))return;
+ if(v){lockY=scrollY;B.style.top=-lockY+'px';B.classList.add('searching')}else{B.classList.remove('searching');B.style.top='';scrollTo(0,lockY)}fit(true)};
+let KB=null;// test override for keyboard height
+function fit(bottom){const vv=window.visualViewport,H=innerHeight;const vh=KB!=null?H-KB:vv?vv.height:H,top=KB!=null?0:vv?vv.offsetTop:0,kb=Math.max(0,H-vh-top);
+ const bar=$('.bar'),R=$('#res');bar.style.transform=kb?`translateY(${-kb}px)`:'';bar.classList.toggle('kb',kb>0);
+ const bh=bar.offsetHeight-(kb?parseFloat(getComputedStyle(bar).paddingBottom)-10:0);R.style.top=top+'px';R.style.height=(vh-bh)+'px';
+ if(bottom)R.scrollTop=R.scrollHeight}
+if(window.visualViewport){visualViewport.addEventListener('resize',()=>fit(true));visualViewport.addEventListener('scroll',()=>fit(false))}addEventListener('resize',()=>fit(true));
 q.onfocus=()=>{searching(true);suggest()};
 $('#cancel').onclick=()=>{q.value='';STP=null;q.blur();searching(false);render()};
 $('#qx').onclick=()=>{q.value='';STP=null;suggest();q.focus()};
-$('#res').addEventListener('touchstart',()=>q.blur(),{passive:true});
+document.addEventListener('touchmove',e=>{if(document.body.classList.contains('searching')&&!e.target.closest('#res'))e.preventDefault()},{passive:false});
 // ---- quantity helpers + stepper ----
 const isN=x=>!x||/^\d+$/.test(String(x).trim());const qOf=i=>/^\d+$/.test(String(i.qty||'').trim())?+i.qty:1;
 const findOn=n=>Object.values(S.items).find(i=>!i.del&&!i.done&&norm(i.name)===norm(n));
@@ -118,18 +125,23 @@ function search(v){const sy=CAT.syn;const terms=(sy[v]||v.split(' ').map(w=>sy[w
   if(JUNK.test(t)&&!terms.some(w=>JUNK.test(' '+w+' ')))sc-=16;hits.push([sc,i])}
  hits.sort((a,b)=>b[0]-a[0]);const out=[],sn=new Set();for(const[,i]of hits){const p=CAT.p[i];if(sn.has(p[0]))continue;sn.add(p[0]);out.push({name:p[0],p:p[1],s:p[2],l:p[3],c:CAT.order[p[4]]});if(out.length>=12)break}return out}
 function sitem(h,k){const it={...h,cat:h.c};const on=findOn(h.name);const nv=(BYN[h.name]||[]).length;
- return`<button class="si${on?' on':''}" data-k="${k}"><span class="em">${emo(it)}</span><span class="bd"><span class="nm">${esc(h.name)}</span><span class="sb">${[on&&on.s?on.s:h.s,nv>1?nv+' sizes':'',(CATN[h.c]||'').replace(/^\S+ /,'')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="pr">${h.p?eur(+(on&&on.p||h.p)):''}</span><span class="plus">${on?qOf(on):'+'}</span></button>`+(STP&&STP.k==='r'&&STP.key===h.name&&on?stpHTML(on):'')}
-function suggest(){const raw=parse(q.value).name,v=norm(raw);let out=[];
+ return`<button class="si${on?' on':''}" data-k="${k}"><span class="em">${emo(it)}</span><span class="bd"><span class="nm">${esc(h.name)}</span><span class="sb">${[h.free?'Add as typed':'',on&&on.s?on.s:h.s,nv>1?nv+' sizes':'',(CATN[h.c]||'').replace(/^\S+ /,'')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="pr">${h.p?eur(+(on&&on.p||h.p)):''}</span><span class="plus">${on?qOf(on):'+'}</span></button>`+(STP&&STP.k==='r'&&STP.key===h.name&&on?stpHTML(on):'')}
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+function grp(title,items,off){return`<div class="sh">${title}</div><div class="gp">`+items.map((h,k)=>sitem(h,k+off)).reverse().join('')+'</div>'}
+function suggest(){const raw=parse(q.value).name.trim(),v=norm(raw);let out=[],html='';
  if(!v){const onl=new Set(Object.values(S.items).filter(i=>!i.del&&!i.done).map(i=>norm(i.name)));out=Object.values(S.hist).filter(h=>!onl.has(norm(h.name))).sort((a,b)=>b.n-a.n).slice(0,14);
-  SR=out;sug.innerHTML=out.length?`<div class="sh">Frequently bought</div><div class="gp">`+out.map(sitem).join('')+'</div>':`<div class="hint"><div class="ill">🔎</div>Search in English or Dutch — “milk”, “kipfilet”, “toilet paper”.<br>Start with a number for quantity: “2 milk”.</div>`;return}
- const seen=new Set();for(const h of Object.values(S.hist).sort((a,b)=>b.n-a.n))if(norm(h.name).includes(v)&&out.length<3){seen.add(norm(h.name));out.push(h)}
- if(CAT&&v.length>1)for(const h of search(v))if(!seen.has(norm(h.name)))out.push(h);
- SR=out.slice(0,12);const free=`<button class="si free" data-k="-1"><span class="em">✏️</span><span class="bd"><span class="nm">Add “${esc(q.value.trim())}”</span><span class="sb">As typed${nlOf(raw)?' · AH: '+esc(nlOf(raw)):''}</span></span><span class="plus">+</span></button>`;
- sug.innerHTML=`<div class="gp">${free}</div>`+(SR.length?`<div class="sh">AH products</div><div class="gp">`+SR.map(sitem).join('')+'</div>':'')}
+  SR=out;html=out.length?grp('Frequently bought',out,0):`<div class="hint"><div class="ill">🔎</div>Search in English or Dutch — “milk”, “kipfilet”, “toilet paper”.<br>Start with a number for quantity: “2 milk”.</div>`}
+ else{const seen=new Set(),mine=[];for(const h of Object.values(S.hist).sort((a,b)=>b.n-a.n))if(norm(h.name).includes(v)&&mine.length<3){seen.add(norm(h.name));mine.push(h)}
+  const prods=CAT&&v.length>1?search(v).filter(h=>!seen.has(norm(h.name))).slice(0,12):[];
+  const exact=[...mine,...prods].some(h=>norm(h.name)===v);
+  const free=exact?[]:[{name:cap(raw),c:catOf(raw),free:1}];
+  SR=[...free,...mine,...prods];
+  // DOM top->bottom: products (worst..best), yours, typed item nearest the bar
+  html=(prods.length?grp('AH products',prods,free.length+mine.length):'')+(mine.length?grp('Your items',mine,free.length):'')+(free.length?grp(nlOf(raw)?'Your item · AH: '+esc(nlOf(raw)):'Your item',free,0):'')}
+ sug.innerHTML=html;fit(true)}
 let st;q.oninput=()=>{clearTimeout(st);st=setTimeout(suggest,60)};
 sug.onclick=e=>{if(stpClick(e))return;const b=e.target.closest('[data-k]');if(!b)return;const k=+b.dataset.k,p=parse(q.value);
- if(k<0){if(add(q.value)!==false){tap();q.value='';suggest()}return}
- const h=SR[k],on=findOn(h.name);if(on)setQty(on,qOf(on)+1);else{if(add((p.qty?p.qty+' ':'')+h.name,h)===false)return;tap()}STP={k:'r',key:h.name};suggest()};
+ const h=SR[k],on=findOn(h.name);if(on)setQty(on,qOf(on)+1);else{if(add((p.qty?p.qty+' ':'')+h.name,h.free?{c:h.c}:h)===false)return;tap()}STP={k:'r',key:h.name};suggest()};
 $('#f').onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v)return;const h=SR[0];if(h&&norm(h.name).includes(norm(parse(v).name))){const on=findOn(h.name);on?setQty(on,qOf(on)+1):add(h.name,h)}else add(v);tap();q.value='';STP=null;suggest()};
 // --- edit sheet ---
 let ed;$('#ec').innerHTML=CATS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
@@ -140,15 +152,17 @@ const closeEd=()=>$('#ed').classList.remove('s');$('#ed').onclick=e=>{if(e.targe
 $('#esave').onclick=()=>{const n=$('#en').value.trim()||ed.name,c=$('#ec').value;put({...ed,name:n,nl:n===ed.name?ed.nl:nlOf(n),...(n===ed.name?{}:{p:0,l:'',s:''}),qty:$('#eq').value.trim(),note:$('#eo').value.trim(),cat:c});if(S.hist[norm(n)]){S.hist[norm(n)].c=c;save()}closeEd()};
 $('#edel').onclick=()=>{const old={...ed};put({...ed,del:true});closeEd();toast(ed.name+' deleted',[old])};
 // --- who / store / shop mode ---
-function setMe(w){S.me=w;save();$('#me').innerHTML=avatar(w[0]);$('#who').classList.remove('s')}
-document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{tap();setMe(b.dataset.w)});$('#me').onclick=()=>$('#who').classList.add('s');
+function setMe(w){S.me=w;save();$('#me').innerHTML=avatar(w?w[0]:'U');$('#who').classList.remove('s')}
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{tap();setMe(b.dataset.w||null);toast(b.dataset.w?'This phone is now '+b.dataset.w:'This phone is now unnamed')});
+let lp;$('#me').addEventListener('click',()=>$('#who').classList.add('s'));
 $('#storeb').onclick=()=>{const i=(STORES.indexOf(S.store||STORES[0])+1)%STORES.length;S.store=STORES[i];save();render()};
 $('#shopb').onclick=()=>{S.shop=!S.shop;save();tap();render();toast(S.shop?'Shopping mode on — big rows, ticked items hidden':'Shopping mode off')};
-if(S.me)$('#me').innerHTML=avatar(S.me[0]);else $('#who').classList.add('s');
+{const u=(new URLSearchParams(location.search).get('u')||'').toLowerCase();const M={punardeep:'Punardeep',aastha:'Aastha'};if(M[u]&&S.me!==M[u]){S.me=M[u];save()}}
+$('#me').innerHTML=avatar(S.me?S.me[0]:'U');
 // --- test hooks (?me=, ?add=, ?demo, ?sheet=, ?theme=) ---
-{const u=new URLSearchParams(location.search);if(u.get('theme'))document.documentElement.dataset.theme=u.get('theme');if(u.get('me'))setMe(u.get('me'));
+{const u=new URLSearchParams(location.search);if(u.get('theme'))document.documentElement.dataset.theme=u.get('theme');if(u.get('me'))setMe(u.get('me'));if(u.get('kb')){KB=+u.get('kb');document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;left:0;right:0;bottom:0;height:${KB}px;background:#D1D4DA;z-index:50;display:grid;place-items:center;color:#777;font:15px -apple-system,system-ui">simulated iOS keyboard (${KB}px)</div>`)}
  if(u.has('demo')&&!Object.keys(S.items).length){const D=[['2','AH Halfvolle melk',1.79,'1,5 l','zuivel','P'],['','AH Bananen tros',1.35,'per tros','agf','A'],['','AH Scharrel kipfilet',3.59,'300 g','vlees','P'],['','AH Koriander',1.19,'15 g','agf','A'],['','AH Volkoren brood',2.19,'800 g','brood','P'],['6','AH Vrije uitloop eieren L',2.59,'6 stuks','zuivel','A'],['','AH Toiletpapier 3-laags',5.49,'12 rollen','huishoud','P'],['','AH Basmati rijst',2.49,'1 kg','pasta','A'],['','AH Griekse yoghurt',1.89,'1 kg','zuivel','P']];
   D[5][0]='';D.forEach(([qt,n,p,s,c,b],k)=>S.items['d'+k]={id:'d'+k,name:n,qty:qt,note:k==2?'Free range if possible':'',nl:'',p,s,l:'',cat:c,by:b,done:k==1||k==4,del:false,t:Date.now()-k*1000});save()}
- if(u.get('add'))setTimeout(()=>add(u.get('add')),50);if(u.has('q'))setTimeout(()=>{q.value=u.get('q');searching(true);suggest();if(u.has('tap')){for(let t=0;t<+u.get('tap');t++)sug.querySelector('[data-k="0"]').click()}},800);if(u.has('row'))setTimeout(()=>{LST.querySelector('.row[data-id="'+u.get('row')+'"] .bd').click()},300)}
+ if(u.get('add'))setTimeout(()=>add(u.get('add')),50);if(u.has('q'))setTimeout(()=>{q.value=u.get('q');searching(true);suggest();fit(true);if(u.has('tap')){for(let t=0;t<+u.get('tap');t++)sug.querySelector('[data-k="'+SR.findIndex(h=>!h.free)+'"]').click()}},800);if(u.has('row'))setTimeout(()=>{LST.querySelector('.row[data-id="'+u.get('row')+'"] .bd').click()},300)}
 render();if(!location.search.includes('nosync'))connect();document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');

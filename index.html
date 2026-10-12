@@ -3,7 +3,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="AH List">
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><title>AH List</title>
+<link rel="manifest" id="mf" href="manifest.webmanifest"><script>(function(){try{var u=(new URLSearchParams(location.search).get('u')||'').toLowerCase();if(u!=='punardeep'&&u!=='aastha'){var s=JSON.parse(localStorage.ahlist1||'{}').me;u=s?s.toLowerCase():''}if(u==='punardeep'||u==='aastha')document.getElementById('mf').href='manifest-'+u+'.webmanifest'}catch(e){}})()</script><link rel="apple-touch-icon" href="icon-180.png"><title>AH List</title>
 <style>
 :root{--ah:#0A8FD8;--ah2:#0071C2;--bg:#F2F2F7;--card:#FFFFFF;--card2:#F7F7FA;--tx:#0B0B0F;--mu:#8A8A93;--ln:rgba(60,60,67,.12);--ok:#30C46A;--red:#FF3B30;--bar:rgba(249,249,251,.82);--sh:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,30,60,.06);--tile:#EEF6FC}
 :root[data-theme=dark]{--ah:#2BA9F0;--ah2:#5BC0F8;--bg:#000;--card:#1C1C1E;--card2:#2C2C2E;--tx:#F5F5F7;--mu:#8E8E93;--ln:rgba(84,84,88,.45);--bar:rgba(22,22,24,.8);--sh:none;--tile:#22303A}
@@ -89,6 +89,10 @@ main{padding:4px 16px}
 .vr{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:none}.vr::-webkit-scrollbar{display:none}
 .vc{flex:none;display:flex;flex-direction:column;align-items:center;padding:7px 12px;border-radius:10px;background:var(--card);border:1.5px solid transparent;font-size:14px;font-weight:600}.vc small{color:var(--mu);font-weight:500;font-size:12px}.vc.on{border-color:var(--ah);color:var(--ah)}
 .row.sel .rc{background:var(--card2)}
+body.searching{position:fixed;left:0;right:0;overflow:hidden}
+#res{bottom:auto!important;display:flex;flex-direction:column;justify-content:flex-start;overscroll-behavior:contain}#sug{margin:auto 0 0;padding:0 0 6px;flex:none;overflow:visible}
+.bar{transition:transform .25s cubic-bezier(.2,.9,.3,1)}.bar.kb{padding-bottom:10px}
+.whos button{padding:18px 6px}.whos .av{width:52px;height:52px;font-size:22px}
 #hapt{position:absolute;opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style></head><body>
@@ -107,6 +111,6 @@ main{padding:4px 16px}
 <div class="sheet" id="ed"><div class="pan"><div class="grab"></div><div class="shd"><button id="ecancel">Cancel</button><h2 style="text-align:center">Edit item</h2><button id="esave">Save</button></div>
 <div class="fld"><input id="en" placeholder="Name"><input id="eq" placeholder="Quantity (e.g. 2, 500 g)"><input id="eo" placeholder="Note (brand, organic…)"><select id="ec"></select></div>
 <div id="einfo"></div><a id="elink" target="_blank">View on ah.nl ›</a><div class="btns"><button class="btn d" id="edel">Delete item</button></div></div></div>
-<div class="sheet" id="who"><div class="pan"><div class="grab"></div><h2 style="font-size:22px;text-align:center;margin:6px 0 4px">Who's shopping?</h2><p style="text-align:center;color:var(--mu);font-size:15px">So you both see who added what.</p>
-<div class="whos"><button data-w="Punardeep"><span class="av" style="background:#0A84FF">P</span>Punardeep</button><button data-w="Aastha"><span class="av" style="background:#FF5E9A">A</span>Aastha</button></div></div></div>
+<div class="sheet" id="who"><div class="pan"><div class="grab"></div><h2 style="font-size:20px;text-align:center;margin:6px 0 4px">This phone belongs to</h2><p style="text-align:center;color:var(--mu);font-size:14px">Shown as the avatar on items you add. Tip: install from your personal link so it sticks.</p>
+<div class="whos"><button data-w="Punardeep"><span class="av" style="background:#0A84FF">P</span>Punardeep</button><button data-w="Aastha"><span class="av" style="background:#FF5E9A">A</span>Aastha</button><button data-w=""><span class="av" style="background:#8E8E93">?</span>Unnamed</button></div></div></div>
 <script src="config.js"></script><script src="app.js"></script></body></html>
