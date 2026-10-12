@@ -14,8 +14,9 @@ ah=[s for s in d if s['n']=='ah'][0]['d']
 O=R['order'];out=[];seen=set()
 for p in ah:
   n=p['n'].strip()
-  if not n or n in seen:continue
-  seen.add(n);m=re.match(r'(wi\d+)',p.get('l',''))
+  k=(n,p.get('s',''))
+  if not n or k in seen:continue
+  seen.add(k);m=re.match(r'(wi\d+)',p.get('l',''))
   out.append([n,p.get('p'),p.get('s',''),p.get('l',''),O.index(cat(n))])
 json.dump({'order':O,'rules':R['rules'],'syn':R['syn'],'p':out},open('catalog.json','w'),ensure_ascii=False,separators=(',',':'))
 from collections import Counter;print(len(out),Counter(O[x[4]] for x in out))

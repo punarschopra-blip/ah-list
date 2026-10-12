@@ -2,7 +2,7 @@ const CATS=[['agf','🥦 Fruit & veg'],['brood','🥖 Bakery'],['vlees','🥩 Me
 const CATN=Object.fromEntries(CATS);
 // "nl / en" synonyms -> category
 // AH catalog: ~15k real products (name, price, size, link) from checkjebon (MIT, refreshed daily from ah.nl); aisle = keyword rules
-let CAT=null,IDX=[];fetch('catalog.json').then(r=>r.json()).then(j=>{CAT=j;IDX=j.p.map(p=>' '+norm(p[0]))}).catch(()=>{});
+let CAT=null,IDX=[],BYN={};fetch('catalog.json').then(r=>r.json()).then(j=>{CAT=j;IDX=j.p.map(p=>' '+norm(p[0]));j.p.forEach((p,i)=>{(BYN[p[0]]=BYN[p[0]]||[]).push(i)})}).catch(()=>{});
 function ruleCat(n){if(!CAT)return null;const t=' '+norm(n)+' ';for(const[c,ks]of CAT.rules)for(const k0 of ks){const k=norm(k0);if(t.includes(' '+k)||(k.length>3&&t.includes(k)))return c}return null}
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const SYN=()=>CAT?CAT.syn:{};
@@ -67,7 +67,7 @@ else if(!open.length)h=`<div class="empty sm"><div class="ill">🎉</div><h3>All
 CATS.forEach(([c,lab],ix)=>{const g=open.filter(i=>i.cat===c).sort((a,b)=>a.name.localeCompare(b.name));if(!g.length)return;const col=S.col[c];
  const[e,...n]=lab.split(' ');h+=`<section class="sec${col?' col':''}"><header data-c="${c}"><span class="se">${e}</span><span class="sn">${n.join(' ')}</span><span class="cnt">${g.length}</span><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></header><div class="grp">${g.map(row).join('')}</div></section>`});
 if(done.length){const col=S.col._done;h+=`<section class="sec basket${col?' col':''}"><header data-c="_done"><span class="se">🧺</span><span class="sn">In the basket</span><span class="cnt">${done.length}</span><button class="clr" id="clr">Clear</button><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></header><div class="grp">${done.sort((a,b)=>b.t-a.t).map(row).join('')}</div></section>`}
-L.innerHTML=h;
+L.innerHTML=h;if(STP&&STP.k==='l'){const r=L.querySelector(`.row[data-id="${STP.key}"]`),it=S.items[STP.key];if(r&&it&&!it.done){r.classList.add('sel');r.insertAdjacentHTML('afterend',stpHTML(it,1))}else STP=null}
 // progress + totals
 const tot=live.length,dn=done.length,frac=tot?dn/tot:0;$('#ring').style.strokeDashoffset=(1-frac)*113.1;
 $('#prog').textContent=tot?`${dn} of ${tot} in basket`:'Nothing on the list yet';
@@ -79,7 +79,7 @@ $('#store').textContent=S.store||STORES[0];$('#shopb').classList.toggle('on',S.s
 const LST=$('#list');
 LST.addEventListener('click',e=>{if(e.target.id==='clr'){e.stopPropagation();const d=Object.values(S.items).filter(i=>i.done&&!i.del),old=d.map(i=>({...i}));d.forEach(i=>{i.del=true;i.t=Date.now()});save();pub();render();tap();toast(`Cleared ${d.length} item${d.length>1?'s':''}`,old);return}
  const hd=e.target.closest('header[data-c]');if(hd){const c=hd.dataset.c;S.col[c]=!S.col[c];save();hd.parentNode.classList.toggle('col');return}
- const r=e.target.closest('.row');if(!r||r._sw)return;const it=S.items[r.dataset.id];if(e.target.closest('.ck'))return toggle(r,it);openEd(it)});
+ if(stpClick(e))return;const r=e.target.closest('.row');if(!r||r._sw)return;const it=S.items[r.dataset.id];if(e.target.closest('.ck'))return toggle(r,it);if(it.done)return openEd(it);STP=STP&&STP.key===it.id?null:{k:'l',key:it.id};tap();render()});
 function toggle(r,it){tap();const old={...it};r.classList.add(it.done?'unpop':'pop');if(!it.done)r.classList.add('done');
  setTimeout(()=>{r.classList.add('out');setTimeout(()=>{put({...it,done:!it.done});if(!it.done)toast(`${it.name} in the basket`,[old])},220)},380)}
 let sx=0,sy=0,cur=null,dx=0,lock=0;
@@ -90,10 +90,24 @@ LST.addEventListener('touchend',()=>{if(!cur)return;const r=cur,c=r.querySelecto
  if(Math.abs(dx)>90){if(dx>0){c.style.transform='';toggle(r,it)}else{tap();c.style.transform='translateX(-110%)';const old={...it};setTimeout(()=>{put({...it,del:true});toast(it.name+' deleted',[old])},200)}}else c.style.transform='';
  r.classList.remove('arm');setTimeout(()=>r._sw=false,50)});
 // --- add sheet ---
-const sheet=$('#add'),q=$('#q'),sug=$('#sug');let SR=[];
-function openAdd(v){sheet.classList.add('s');document.body.classList.add('lock');q.value=v||'';suggest();setTimeout(()=>q.focus(),60)}
-function closeAdd(){sheet.classList.remove('s');document.body.classList.remove('lock');q.blur()}
-$('#addb').onclick=()=>openAdd();$('#done').onclick=closeAdd;sheet.onclick=e=>{if(e.target===sheet)closeAdd()};
+const q=$('#q'),sug=$('#sug');let SR=[],STP=null;// STP={k:'r'|'l',key}
+const searching=v=>{document.body.classList.toggle('searching',v)};
+q.onfocus=()=>{searching(true);suggest()};
+$('#cancel').onclick=()=>{q.value='';STP=null;q.blur();searching(false);render()};
+$('#qx').onclick=()=>{q.value='';STP=null;suggest();q.focus()};
+$('#res').addEventListener('touchstart',()=>q.blur(),{passive:true});
+// ---- quantity helpers + stepper ----
+const isN=x=>!x||/^\d+$/.test(String(x).trim());const qOf=i=>/^\d+$/.test(String(i.qty||'').trim())?+i.qty:1;
+const findOn=n=>Object.values(S.items).find(i=>!i.del&&!i.done&&norm(i.name)===norm(n));
+function setQty(it,n){if(n<=0){const old={...it};put({...it,del:true});tap();toast(it.name+' removed',[old]);STP=null;refresh();return}put({...it,qty:n>1?String(n):''});tap();refresh()}
+const VARS=n=>(BYN[n]||[]).map(i=>CAT.p[i]);
+function stpHTML(it,edit){const v=it?VARS(it.name):[];const n=it?qOf(it):0;
+ return`<div class="stp" data-id="${it?it.id:''}"><div class="sr"><button class="sb1" data-a="-" aria-label="less">${n<=1?'<svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12"/></svg>':'−'}</button><span class="sn1">${n}</span><button class="sb1" data-a="+" aria-label="more">+</button>
+ ${edit?'<button class="ed1" data-a="e">Details</button>':''}</div>${v.length>1?`<div class="vr">${v.map((p,k)=>`<button class="vc${p[2]===it.s?' on':''}" data-v="${k}">${esc(p[2]||'—')}<small>${eur(+p[1])}</small></button>`).join('')}</div>`:''}</div>`}
+function stpClick(e){const st=e.target.closest('.stp');if(!st)return false;e.stopPropagation();const it=S.items[st.dataset.id];if(!it)return true;const a=e.target.closest('[data-a]'),v=e.target.closest('[data-v]');
+ if(a){const t=a.dataset.a;if(t==='+')setQty(it,qOf(it)+1);else if(t==='-')setQty(it,qOf(it)-1);else{STP=null;openEd(it)}}
+ if(v){const p=VARS(it.name)[+v.dataset.v];put({...it,p:p[1],s:p[2],l:p[3]});tap();refresh()}return true}
+function refresh(){if(document.body.classList.contains('searching'))suggest();else render()}
 const STAPLE=/ (halfvolle|volle|magere|houdbare|scharrel|vrije uitloop|volkoren|bruin|tarwe|mineraalwater|ongezouten|gezouten|langgraan|toiletpapier|keukenpapier)\b/;
 const JUNK=/(croissant|spread|speculoos|ragout|bapao|miso|kruidnoot|kruidnoten|muffin|koffieroom|koffiewafel|mousse|blokken|broodje|ijsje|appelflap|stroopwafel|bladerdeeg|doekjes)|\b(chocoladepasta|digestive|hagelslag|rotsjes|pindarotsjes|biscuit|vlokken|flikken|repen|pasta|reep|maaltijd|stamppot|worst|mousse|zakjes|toiletblok|chocolade|choco|creme|crème|vochtig|bonbon|drop|koek|snoep|smaak|ijs|chips|toetje|pudding|dessert|mix|saus|poeder|wafel|reiniger|doekjes|spray|shake)\b/;
 function search(v){const sy=CAT.syn;const terms=(sy[v]||v.split(' ').map(w=>sy[w]||w).join(' ')).split(' ').filter(Boolean),hits=[];
@@ -102,21 +116,21 @@ function search(v){const sy=CAT.syn;const terms=(sy[v]||v.split(' ').map(w=>sy[w
   for(const w of terms){const k=t.indexOf(w);if(k<0){ok=false;break}const st=t[k-1]===' ',en=k+w.length===t.length||t[k+w.length]===' ';sc+=st&&en?14:st?5:1;if(t.endsWith(' '+w))sc+=8;if((t+' ').startsWith(' ah '+w+' ')||(t+' ').startsWith(' ah biologisch '+w+' '))sc+=9}
   if(!ok)continue;const p=CAT.p[i],wc=t.trim().split(' ').length;if(t.startsWith(' ah '))sc+=6;sc-=wc*1.8;if(wi>=0&&p[4]===wi)sc+=7;if(STAPLE.test(t))sc+=4;
   if(JUNK.test(t)&&!terms.some(w=>JUNK.test(' '+w+' ')))sc-=16;hits.push([sc,i])}
- return hits.sort((a,b)=>b[0]-a[0]).slice(0,12).map(([,i])=>{const p=CAT.p[i];return{name:p[0],p:p[1],s:p[2],l:p[3],c:CAT.order[p[4]]}})}
-function sitem(h,k){const it={...h,cat:h.c};const on=Object.values(S.items).some(i=>!i.del&&!i.done&&norm(i.name)===norm(h.name));
- return`<button class="si${on?' on':''}" data-k="${k}"><span class="em">${emo(it)}</span><span class="bd"><span class="nm">${esc(h.name)}</span><span class="sb">${[h.s,(CATN[h.c]||'').replace(/^\S+ /,'')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="pr">${h.p?eur(+h.p):''}</span><span class="plus">${on?'✓':'+'}</span></button>`}
+ hits.sort((a,b)=>b[0]-a[0]);const out=[],sn=new Set();for(const[,i]of hits){const p=CAT.p[i];if(sn.has(p[0]))continue;sn.add(p[0]);out.push({name:p[0],p:p[1],s:p[2],l:p[3],c:CAT.order[p[4]]});if(out.length>=12)break}return out}
+function sitem(h,k){const it={...h,cat:h.c};const on=findOn(h.name);const nv=(BYN[h.name]||[]).length;
+ return`<button class="si${on?' on':''}" data-k="${k}"><span class="em">${emo(it)}</span><span class="bd"><span class="nm">${esc(h.name)}</span><span class="sb">${[on&&on.s?on.s:h.s,nv>1?nv+' sizes':'',(CATN[h.c]||'').replace(/^\S+ /,'')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="pr">${h.p?eur(+(on&&on.p||h.p)):''}</span><span class="plus">${on?qOf(on):'+'}</span></button>`+(STP&&STP.k==='r'&&STP.key===h.name&&on?stpHTML(on):'')}
 function suggest(){const raw=parse(q.value).name,v=norm(raw);let out=[];
  if(!v){const onl=new Set(Object.values(S.items).filter(i=>!i.del&&!i.done).map(i=>norm(i.name)));out=Object.values(S.hist).filter(h=>!onl.has(norm(h.name))).sort((a,b)=>b.n-a.n).slice(0,14);
-  SR=out;sug.innerHTML=out.length?`<div class="sh">Frequently bought</div>`+out.map(sitem).join(''):`<div class="hint"><div class="ill">🔎</div>Search in English or Dutch — “milk”, “kipfilet”, “toilet paper”.<br>Start with a number for quantity: “2 milk”.</div>`;return}
+  SR=out;sug.innerHTML=out.length?`<div class="sh">Frequently bought</div><div class="gp">`+out.map(sitem).join('')+'</div>':`<div class="hint"><div class="ill">🔎</div>Search in English or Dutch — “milk”, “kipfilet”, “toilet paper”.<br>Start with a number for quantity: “2 milk”.</div>`;return}
  const seen=new Set();for(const h of Object.values(S.hist).sort((a,b)=>b.n-a.n))if(norm(h.name).includes(v)&&out.length<3){seen.add(norm(h.name));out.push(h)}
  if(CAT&&v.length>1)for(const h of search(v))if(!seen.has(norm(h.name)))out.push(h);
  SR=out.slice(0,12);const free=`<button class="si free" data-k="-1"><span class="em">✏️</span><span class="bd"><span class="nm">Add “${esc(q.value.trim())}”</span><span class="sb">As typed${nlOf(raw)?' · AH: '+esc(nlOf(raw)):''}</span></span><span class="plus">+</span></button>`;
- sug.innerHTML=free+(SR.length?`<div class="sh">AH products</div>`+SR.map(sitem).join(''):'')}
+ sug.innerHTML=`<div class="gp">${free}</div>`+(SR.length?`<div class="sh">AH products</div><div class="gp">`+SR.map(sitem).join('')+'</div>':'')}
 let st;q.oninput=()=>{clearTimeout(st);st=setTimeout(suggest,60)};
-sug.onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;const k=+b.dataset.k,p=parse(q.value);
- const ok=k<0?add(q.value):add((p.qty?p.qty+' ':'')+SR[k].name,SR[k]);if(ok===false)return;tap();b.classList.add('on','flash');b.querySelector('.plus').textContent='✓';
- if(q.value){setTimeout(()=>{q.value='';suggest();q.focus()},350)}};
-$('#f').onsubmit=e=>{e.preventDefault();if(!q.value.trim())return;const b=sug.querySelector('.si:not(.free)');add(q.value);tap();q.value='';suggest()};
+sug.onclick=e=>{if(stpClick(e))return;const b=e.target.closest('[data-k]');if(!b)return;const k=+b.dataset.k,p=parse(q.value);
+ if(k<0){if(add(q.value)!==false){tap();q.value='';suggest()}return}
+ const h=SR[k],on=findOn(h.name);if(on)setQty(on,qOf(on)+1);else{if(add((p.qty?p.qty+' ':'')+h.name,h)===false)return;tap()}STP={k:'r',key:h.name};suggest()};
+$('#f').onsubmit=e=>{e.preventDefault();const v=q.value.trim();if(!v)return;const h=SR[0];if(h&&norm(h.name).includes(norm(parse(v).name))){const on=findOn(h.name);on?setQty(on,qOf(on)+1):add(h.name,h)}else add(v);tap();q.value='';STP=null;suggest()};
 // --- edit sheet ---
 let ed;$('#ec').innerHTML=CATS.map(([c,l])=>`<option value="${c}">${l}</option>`).join('');
 function openEd(it){ed=it;$('#en').value=it.name;$('#eq').value=it.qty||'';$('#eo').value=it.note||'';$('#ec').value=it.cat;
@@ -133,8 +147,8 @@ $('#shopb').onclick=()=>{S.shop=!S.shop;save();tap();render();toast(S.shop?'Shop
 if(S.me)$('#me').innerHTML=avatar(S.me[0]);else $('#who').classList.add('s');
 // --- test hooks (?me=, ?add=, ?demo, ?sheet=, ?theme=) ---
 {const u=new URLSearchParams(location.search);if(u.get('theme'))document.documentElement.dataset.theme=u.get('theme');if(u.get('me'))setMe(u.get('me'));
- if(u.has('demo')&&!Object.keys(S.items).length){const D=[['2','AH Halfvolle melk',.99,'1,5 l','zuivel','P'],['','AH Bananen tros',1.35,'per tros','agf','A'],['','AH Scharrel kipfilet',3.59,'300 g','vlees','P'],['','AH Koriander',1.19,'15 g','agf','A'],['','AH Volkoren brood',2.19,'800 g','brood','P'],['6','AH Vrije uitloop eieren L',2.59,'6 stuks','zuivel','A'],['','AH Toiletpapier 3-laags',5.49,'12 rollen','huishoud','P'],['','AH Basmati rijst',2.49,'1 kg','pasta','A'],['','AH Griekse yoghurt',1.89,'1 kg','zuivel','P']];
+ if(u.has('demo')&&!Object.keys(S.items).length){const D=[['2','AH Halfvolle melk',1.79,'1,5 l','zuivel','P'],['','AH Bananen tros',1.35,'per tros','agf','A'],['','AH Scharrel kipfilet',3.59,'300 g','vlees','P'],['','AH Koriander',1.19,'15 g','agf','A'],['','AH Volkoren brood',2.19,'800 g','brood','P'],['6','AH Vrije uitloop eieren L',2.59,'6 stuks','zuivel','A'],['','AH Toiletpapier 3-laags',5.49,'12 rollen','huishoud','P'],['','AH Basmati rijst',2.49,'1 kg','pasta','A'],['','AH Griekse yoghurt',1.89,'1 kg','zuivel','P']];
   D[5][0]='';D.forEach(([qt,n,p,s,c,b],k)=>S.items['d'+k]={id:'d'+k,name:n,qty:qt,note:k==2?'Free range if possible':'',nl:'',p,s,l:'',cat:c,by:b,done:k==1||k==4,del:false,t:Date.now()-k*1000});save()}
- if(u.get('add'))setTimeout(()=>add(u.get('add')),50);if(u.has('sheet'))setTimeout(()=>{openAdd(u.get('sheet'))},u.get('sheet')?700:50)}
+ if(u.get('add'))setTimeout(()=>add(u.get('add')),50);if(u.has('q'))setTimeout(()=>{q.value=u.get('q');searching(true);suggest();if(u.has('tap')){for(let t=0;t<+u.get('tap');t++)sug.querySelector('[data-k="0"]').click()}},800);if(u.has('row'))setTimeout(()=>{LST.querySelector('.row[data-id="'+u.get('row')+'"] .bd').click()},300)}
 render();if(!location.search.includes('nosync'))connect();document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
