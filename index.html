@@ -93,6 +93,14 @@ body.searching{position:fixed;left:0;right:0;overflow:hidden}
 #res{bottom:auto!important;display:flex;flex-direction:column;justify-content:flex-start;overscroll-behavior:contain}#sug{margin:auto 0 0;padding:0 0 6px;flex:none;overflow:visible}
 .bar{transition:transform .25s cubic-bezier(.2,.9,.3,1)}.bar.kb{padding-bottom:10px}
 .whos button{padding:18px 6px}.whos .av{width:52px;height:52px;font-size:22px}
+#mic,#lang{flex:none;display:grid;place-items:center}#mic{width:32px;height:32px;border-radius:50%}#mic svg{width:20px;height:20px;fill:none;stroke:var(--ah);stroke-width:2;stroke-linecap:round}
+#lang{font-size:11px;font-weight:700;color:var(--ah);border:1.5px solid var(--ah);border-radius:6px;padding:1px 4px;opacity:.8}
+.listening #mic{background:var(--red);animation:pulse 1.2s infinite}.listening #mic svg{stroke:#fff}@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,59,48,.5)}100%{box-shadow:0 0 0 14px rgba(255,59,48,0)}}
+.multi{display:block;width:100%;margin-top:12px;padding:14px;border-radius:14px;background:var(--ah);color:#fff;font-weight:600;text-align:left;box-shadow:0 6px 18px rgba(10,143,216,.3)}
+#nlpl{overflow-y:auto;max-height:60vh;background:var(--card);border-radius:14px;box-shadow:var(--sh)}.nr{display:flex;align-items:center;gap:10px;padding:10px 12px}.nr+.nr{border-top:.5px solid var(--ln)}
+.nn{font:500 16px -apple-system,system-ui;border:0;background:none;color:var(--tx);width:100%;padding:0;outline:none;-webkit-user-select:text;user-select:text}
+.nq{display:flex;align-items:center;background:var(--card2);border-radius:10px;flex:none}.nq button{width:30px;height:32px;color:var(--ah);font-size:19px}.qv{width:44px;text-align:center;border:0;background:none;color:var(--tx);font:600 15px -apple-system,system-ui;outline:none}
+.nx{width:26px;height:26px;border-radius:50%;background:var(--card2);color:var(--mu);font-size:12px;flex:none}#nlpadd{flex:none;min-height:50px}#nlpadd:disabled{opacity:.4}#nlpl{flex:0 1 auto}
 #hapt{position:absolute;opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style></head><body>
@@ -106,11 +114,12 @@ body.searching{position:fixed;left:0;right:0;overflow:hidden}
 <main id="list"></main>
 <p class="foot">Products, sizes &amp; prices: daily ah.nl snapshot (open checkjebon data). ~ = estimate. Aisle order follows a typical AH layout.</p>
 <div id="res"><div id="sug"></div></div>
-<div class="bar"><form id="f" autocomplete="off"><div class="sf"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search or add — milk, kipfilet…" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" id="qx" aria-label="clear">✕</button></div><button type="button" id="cancel">Cancel</button></form></div>
+<div class="bar"><form id="f" autocomplete="off"><div class="sf"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search or add — milk, kipfilet…" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" id="qx" aria-label="clear">✕</button><button type="button" id="lang" aria-label="voice language">NL</button><button type="button" id="mic" aria-label="voice input"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button type="button" id="cancel">Cancel</button></form></div>
 <div id="toast"><span id="tm"></span><button id="undo">Undo</button></div>
 <div class="sheet" id="ed"><div class="pan"><div class="grab"></div><div class="shd"><button id="ecancel">Cancel</button><h2 style="text-align:center">Edit item</h2><button id="esave">Save</button></div>
 <div class="fld"><input id="en" placeholder="Name"><input id="eq" placeholder="Quantity (e.g. 2, 500 g)"><input id="eo" placeholder="Note (brand, organic…)"><select id="ec"></select></div>
 <div id="einfo"></div><a id="elink" target="_blank">View on ah.nl ›</a><div class="btns"><button class="btn d" id="edel">Delete item</button></div></div></div>
 <div class="sheet" id="who"><div class="pan"><div class="grab"></div><h2 style="font-size:20px;text-align:center;margin:6px 0 4px">This phone belongs to</h2><p style="text-align:center;color:var(--mu);font-size:14px">Shown as the avatar on items you add. Tip: install from your personal link so it sticks.</p>
 <div class="whos"><button data-w="Punardeep"><span class="av" style="background:#0A84FF">P</span>Punardeep</button><button data-w="Aastha"><span class="av" style="background:#FF5E9A">A</span>Aastha</button><button data-w=""><span class="av" style="background:#8E8E93">?</span>Unnamed</button></div></div></div>
-<script src="config.js"></script><script src="app.js"></script></body></html>
+<div class="sheet" id="nlp"><div class="pan"><div class="grab"></div><div class="shd"><button id="nlpc">Cancel</button><h2 id="nlpt" style="text-align:center">Add items</h2><span style="width:56px"></span></div><div id="nlpl"></div><button class="btn p" id="nlpadd" style="margin-top:14px;width:100%">Add all</button></div></div>
+<script src="config.js"></script><script src="app.js"></script><script src="nlp.js"></script></body></html>
