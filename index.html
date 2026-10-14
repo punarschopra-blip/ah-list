@@ -101,6 +101,10 @@ body.searching{position:fixed;left:0;right:0;overflow:hidden}
 .nn{font:500 16px -apple-system,system-ui;border:0;background:none;color:var(--tx);width:100%;padding:0;outline:none;-webkit-user-select:text;user-select:text}
 .nq{display:flex;align-items:center;background:var(--card2);border-radius:10px;flex:none}.nq button{width:30px;height:32px;color:var(--ah);font-size:19px}.qv{width:44px;text-align:center;border:0;background:none;color:var(--tx);font:600 15px -apple-system,system-ui;outline:none}
 .nx{width:26px;height:26px;border-radius:50%;background:var(--card2);color:var(--mu);font-size:12px;flex:none}#nlpadd{flex:none;min-height:50px}#nlpadd:disabled{opacity:.4}#nlpl{flex:0 1 auto}
+#cam{flex:none;display:grid;place-items:center;width:30px;height:32px}#cam svg{width:21px;height:21px;fill:none;stroke:var(--ah);stroke-width:1.9;stroke-linejoin:round}
+.opt{width:100%;display:flex;gap:12px;align-items:center;text-align:left;background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--sh)}.opt .bd{gap:3px}
+#scant{width:100%;font:17px/1.4 -apple-system,system-ui;border:0;border-radius:14px;padding:14px;background:var(--card);color:var(--tx);outline:none;resize:none;-webkit-user-select:text;user-select:text}
+#lang{font-size:10px}
 #hapt{position:absolute;opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style></head><body>
@@ -114,7 +118,7 @@ body.searching{position:fixed;left:0;right:0;overflow:hidden}
 <main id="list"></main>
 <p class="foot">Products, sizes &amp; prices: daily ah.nl snapshot (open checkjebon data). ~ = estimate. Aisle order follows a typical AH layout.</p>
 <div id="res"><div id="sug"></div></div>
-<div class="bar"><form id="f" autocomplete="off"><div class="sf"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search or add — milk, kipfilet…" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" id="qx" aria-label="clear">✕</button><button type="button" id="lang" aria-label="voice language">NL</button><button type="button" id="mic" aria-label="voice input"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button type="button" id="cancel">Cancel</button></form></div>
+<div class="bar"><form id="f" autocomplete="off"><div class="sf"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search or add — milk, kipfilet…" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" id="qx" aria-label="clear">✕</button><button type="button" id="lang" aria-label="voice language">NL</button><button type="button" id="cam" aria-label="photo to list"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button type="button" id="mic" aria-label="voice input"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button type="button" id="cancel">Cancel</button></form></div>
 <div id="toast"><span id="tm"></span><button id="undo">Undo</button></div>
 <div class="sheet" id="ed"><div class="pan"><div class="grab"></div><div class="shd"><button id="ecancel">Cancel</button><h2 style="text-align:center">Edit item</h2><button id="esave">Save</button></div>
 <div class="fld"><input id="en" placeholder="Name"><input id="eq" placeholder="Quantity (e.g. 2, 500 g)"><input id="eo" placeholder="Note (brand, organic…)"><select id="ec"></select></div>
@@ -122,4 +126,11 @@ body.searching{position:fixed;left:0;right:0;overflow:hidden}
 <div class="sheet" id="who"><div class="pan"><div class="grab"></div><h2 style="font-size:20px;text-align:center;margin:6px 0 4px">This phone belongs to</h2><p style="text-align:center;color:var(--mu);font-size:14px">Shown as the avatar on items you add. Tip: install from your personal link so it sticks.</p>
 <div class="whos"><button data-w="Punardeep"><span class="av" style="background:#0A84FF">P</span>Punardeep</button><button data-w="Aastha"><span class="av" style="background:#FF5E9A">A</span>Aastha</button><button data-w=""><span class="av" style="background:#8E8E93">?</span>Unnamed</button></div></div></div>
 <div class="sheet" id="nlp"><div class="pan"><div class="grab"></div><div class="shd"><button id="nlpc">Cancel</button><h2 id="nlpt" style="text-align:center">Add items</h2><span style="width:56px"></span></div><div id="nlpl"></div><button class="btn p" id="nlpadd" style="margin-top:14px;width:100%">Add all</button></div></div>
-<script src="config.js"></script><script src="app.js"></script><script src="nlp.js"></script></body></html>
+<input type="file" id="camfile" accept="image/*" capture="environment" hidden>
+<div class="sheet" id="camsheet"><div class="pan"><div class="grab"></div><h2 style="font-size:20px;margin:4px 4px 12px">Photo to list</h2>
+<button class="opt" id="camscan"><span class="em">✍️</span><span class="bd"><b>Scan Text (best, handwriting)</b><span class="sb">iPhone Live Text: long-press the box → “Scan Text”. Works offline.</span></span></button>
+<button class="opt" id="camphoto"><span class="em">📷</span><span class="bd"><b>Take or choose a photo</b><span class="sb">Reads printed text on the phone (OCR). Handwriting is hit-and-miss.</span></span></button></div></div>
+<div class="sheet" id="scan"><div class="pan"><div class="grab"></div><div class="shd"><button id="scanc">Cancel</button><h2 style="text-align:center">Scan list</h2><button id="scango">Next</button></div>
+<p class="sb" style="margin:0 4px 10px;color:var(--mu);font-size:14px">Long-press in the box and tap <b>Scan Text</b> (or the scan icon on the keyboard), point at the list, tap <b>Insert</b>. One item per line.</p>
+<textarea id="scant" rows="8" placeholder="Long-press here → Scan Text&#10;milk&#10;2 avocados&#10;kipfilet"></textarea></div></div>
+<script src="config.js"></script><script src="app.js"></script><script src="nlp.js"></script><script src="ocr.js"></script></body></html>
